@@ -57,3 +57,16 @@ def test_distmult_is_symmetric_in_head_and_tail():
     a = m.score(torch.tensor([0]), torch.tensor([1]), torch.tensor([3]))
     b = m.score(torch.tensor([3]), torch.tensor([1]), torch.tensor([0]))
     assert torch.allclose(a, b)
+
+
+def test_inductive_drugs_with_same_neighbourhood_get_same_representation():
+    # drugs 0 and 1 are both linked to gene 4; with a shared input vector they are indistinguishable
+    kg = _tiny_kg()
+    kg.src, kg.dst, kg.rel = np.array([0, 1, 2, 3]), np.array([4, 4, 4, 5]), np.array([0, 0, 1, 1])
+    mask = kg.node_type == 0
+    model = RGCN(kg.n_nodes, build_edge_sets(kg), dim=8, dropout=0.0, inductive_mask=mask).eval()
+    rep = model.node_repr()
+    assert torch.allclose(rep[0], rep[1], atol=1e-6)
+
+    free = RGCN(kg.n_nodes, build_edge_sets(kg), dim=8, dropout=0.0).eval()
+    assert not torch.allclose(free.node_repr()[0], free.node_repr()[1], atol=1e-4)  # free embeddings memorise identity

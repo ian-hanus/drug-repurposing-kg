@@ -31,6 +31,7 @@ class TrainConfig:
     pos_batch: int = 2048
     eval_every: int = 10
     patience: int = 5             # evaluations without improvement
+    inductive_drugs: bool = False  # R-GCN: drugs share one input embedding
 
 
 class TypeSampler:
@@ -106,7 +107,8 @@ def train_distmult(kg: KG, split: Split, candidates: np.ndarray, cfg: TrainConfi
 def train_rgcn(kg: KG, split: Split, candidates: np.ndarray, cfg: TrainConfig, seed: int, log=None):
     torch.manual_seed(seed)
     rng = np.random.RandomState(seed)
-    model = RGCN(kg.n_nodes, build_edge_sets(kg), cfg.dim, depth=2, dropout=cfg.dropout)
+    mask = (kg.node_type == kg.type_names.index("drug")) if cfg.inductive_drugs else None
+    model = RGCN(kg.n_nodes, build_edge_sets(kg), cfg.dim, depth=2, dropout=cfg.dropout, inductive_mask=mask)
     opt = torch.optim.Adam(model.parameters(), lr=cfg.lr, weight_decay=cfg.weight_decay)
     cand = torch.tensor(candidates)
 

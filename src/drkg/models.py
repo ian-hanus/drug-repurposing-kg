@@ -68,19 +68,29 @@ class RGCNLayer(nn.Module):
 
 
 class RGCN(nn.Module):
-    """R-GCN node encoder over learnable input embeddings + DistMult decoder."""
+    """R-GCN node encoder over learnable input embeddings + DistMult decoder.
 
-    def __init__(self, n_nodes: int, edge_sets: list[EdgeSet], dim: int = 64, depth: int = 2, dropout: float = 0.1):
+    ``inductive_mask`` marks nodes (the drugs) whose input embedding is replaced by
+    one shared vector. Their representation then comes only from their neighbourhood,
+    so it cannot memorise per-drug identity and transfers to drugs unseen in training.
+    """
+
+    def __init__(self, n_nodes: int, edge_sets: list[EdgeSet], dim: int = 64, depth: int = 2, dropout: float = 0.1,
+                 inductive_mask: np.ndarray | None = None):
         super().__init__()
         self.edge_sets = edge_sets
         self.emb = nn.Embedding(n_nodes, dim)
         nn.init.xavier_uniform_(self.emb.weight)
+        self.register_buffer("shared_mask", None if inductive_mask is None else torch.tensor(inductive_mask))
+        self.shared = None if inductive_mask is None else nn.Parameter(torch.randn(dim) * 0.1)
         self.layers = nn.ModuleList(RGCNLayer(dim, len(edge_sets)) for _ in range(depth))
         self.dropout = nn.Dropout(dropout)
         self.rel = nn.Parameter(torch.ones(dim))  # the single "indication" relation
 
     def node_repr(self) -> torch.Tensor:
         h = self.emb.weight
+        if self.shared_mask is not None:
+            h = torch.where(self.shared_mask[:, None], self.shared.expand_as(h), h)
         for i, layer in enumerate(self.layers):
             h = layer(self.dropout(h), self.edge_sets)
             if i < len(self.layers) - 1:
