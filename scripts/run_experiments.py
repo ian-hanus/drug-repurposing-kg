@@ -3,6 +3,7 @@
 import argparse
 import json
 import sys
+from dataclasses import replace
 from pathlib import Path
 
 import numpy as np
@@ -19,7 +20,7 @@ from drkg.train import TrainConfig, score_test, train_distmult, train_rgcn  # no
 parser = argparse.ArgumentParser()
 parser.add_argument("--seeds", type=int, default=3)
 parser.add_argument("--models", nargs="+",
-                    default=["random", "popularity", "drug_knn", "target_overlap", "distmult", "rgcn"])
+                    default=["random", "popularity", "drug_knn", "target_overlap", "distmult", "rgcn", "rgcn_inductive"])
 parser.add_argument("--threads", type=int, default=2)
 parser.add_argument("--steps", type=int, default=150)
 parser.add_argument("--lr", type=float, default=5e-3)
@@ -57,7 +58,8 @@ for seed in range(args.seeds):
             scores = B.target_overlap(kg, adj, drugs, candidates, hops=0)
         else:
             trainer = train_distmult if model == "distmult" else train_rgcn
-            result = trainer(kg, split, candidates, cfg, seed)
+            model_cfg = replace(cfg, inductive_drugs=True) if model == "rgcn_inductive" else cfg
+            result = trainer(kg, split, candidates, model_cfg, seed, **({"log": print} if model != "distmult" else {}))
             drugs, scores = score_test(result, split, candidates)
             val_mrr, history = result["val_mrr"], json.dumps(result["history"])
         m = rank_metrics(scores, drugs, split.test, candidates)
