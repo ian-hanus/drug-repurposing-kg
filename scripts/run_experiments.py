@@ -24,6 +24,7 @@ parser.add_argument("--models", nargs="+",
 parser.add_argument("--threads", type=int, default=2)
 parser.add_argument("--steps", type=int, default=150)
 parser.add_argument("--lr", type=float, default=5e-3)
+parser.add_argument("--patience", type=int, default=5, help="evaluations without val improvement before stopping")
 parser.add_argument("--out", default="results/results.csv")
 args = parser.parse_args()
 
@@ -38,7 +39,7 @@ if out.exists():
 kg = load_primekg()
 adj = B.adjacency(kg)
 candidates = np.unique(kg.indications[:, 1])
-cfg = TrainConfig(steps=args.steps, lr=args.lr)
+cfg = TrainConfig(steps=args.steps, lr=args.lr, patience=args.patience)
 
 for seed in range(args.seeds):
     split = cold_start_split(kg.indications, seed)
