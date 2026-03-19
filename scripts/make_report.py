@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt  # noqa: E402
 import pandas as pd  # noqa: E402
 
 RES = Path(__file__).resolve().parents[1] / "results"
-ORDER = ["random", "popularity", "target_overlap", "drug_knn", "distmult", "rgcn"]
+ORDER = ["random", "popularity", "target_overlap", "drug_knn", "distmult", "rgcn", "rgcn_inductive"]
 METRICS = [("mrr", "MRR"), ("hits@10", "Hits@10"), ("hits@50", "Hits@50"), ("mean_rank", "mean rank"),
            ("macro_mrr", "per-drug MRR")]
 
@@ -49,7 +49,7 @@ def main() -> None:
     for ax, (key, label) in zip(axes, [("mrr", "MRR"), ("hits@10", "Hits@10")]):
         g = [df[df.model == m][key] for m in models]
         ax.bar(range(len(models)), [x.mean() for x in g], yerr=[x.std(ddof=1) if len(x) > 1 else 0 for x in g],
-               color=["#9aa5b1"] * 3 + ["#4c78a8"] + ["#d1495b"] * 2, capsize=3)
+               color=["#9aa5b1"] * 3 + ["#4c78a8"] + ["#d1495b"] * 3, capsize=3)
         ax.set_xticks(range(len(models)), models, rotation=30, ha="right")
         ax.set_ylabel(label)
     fig.suptitle("Cold-start drug repurposing on PrimeKG")
